@@ -51,6 +51,10 @@ header [data-testid] span:not(:has(svg)) {
     clip: rect(0,0,0,0) !important;
 }
 [data-testid="stChatMessage"] p { font-size: 13px !important; }
+[data-testid="stChatMessage"] h1 { font-size: 1.7rem !important; }
+[data-testid="stChatMessage"] h2 { font-size: 1.4rem !important; }
+[data-testid="stChatMessage"] h3 { font-size: 1.1rem !important; }
+[data-testid="stChatMessage"] h4 { font-size: 0.95rem !important; }
 /* 아바타 크기 보호 — div 전체 override 제거 */
 [data-testid="stChatMessageAvatarUser"],
 [data-testid="stChatMessageAvatarAssistant"] {
