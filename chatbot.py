@@ -201,6 +201,22 @@ div[data-cat-btn]:first-of-type {
 [data-testid="stChatInput"] textarea {
     font-size: 13px !important;
 }
+/* 키워드 칩 버튼 */
+div[data-keyword-btn] button {
+    background: #EFF6FF !important;
+    border: 1px solid #BFDBFE !important;
+    color: #2563EB !important;
+    border-radius: 20px !important;
+    padding: 4px 14px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    height: auto !important;
+    white-space: nowrap !important;
+}
+div[data-keyword-btn] button:hover {
+    background: #DBEAFE !important;
+    border-color: #2563EB !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -211,15 +227,37 @@ tab_chat, tab_faq = st.tabs(["💬  챗봇", "❓  자주 묻는 질문"])
 # ════════════════════════════════════════════════════════
 # 탭 1 — 챗봇
 # ════════════════════════════════════════════════════════
+KEYWORDS = [
+    ("수수료 변경", "수수료율은 어떻게 확인하나요?"),
+    ("가맹점 SET", "KCP 대표 매핑SET는 어떤게 있나요?"),
+    ("사전몰 심사현황", "가맹점 카드사 사전몰 심사 현황은 어디서 확인하나요?"),
+    ("정산계좌 변경", "가맹점 정산계좌는 어떻게 바꾸나요?"),
+    ("업종무이자 정책", "카드사 업종 무이자 정책은 어떻게 확인하나요?"),
+    ("해외카드 계약", "해외카드를 계약하고싶은 가맹점이 있어요, 어떻게 해야하나요?"),
+    ("역환금액 처리", "사이트코드에 발생된 역환(이월)금액은 어떻게 없애나요?"),
+]
+
 with tab_chat:
-    st.caption("질문을 입력하면 AI가 FAQ 기반으로 답변해드립니다.")
+    st.caption("질문을 입력하거나 키워드를 클릭하세요.")
+
+    # ── 키워드 칩 ──────────────────────────────────────
+    kw_cols = st.columns(len(KEYWORDS))
+    keyword_triggered = None
+    for idx, (label, question) in enumerate(KEYWORDS):
+        with kw_cols[idx]:
+            st.markdown('<div data-keyword-btn="1">', unsafe_allow_html=True)
+            if st.button(label, key=f"kw_{idx}"):
+                keyword_triggered = question
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
 
     for msg in st.session_state.chat_messages:
         avatar = "❓" if msg["role"] == "user" else "🤖"
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
 
-    user_input = st.chat_input("질문을 입력하세요...")
+    user_input = st.chat_input("질문을 입력하세요...") or keyword_triggered
 
     if user_input:
         st.session_state.chat_messages.append({"role": "user", "content": user_input})
