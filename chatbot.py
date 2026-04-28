@@ -11,22 +11,46 @@ load_dotenv(Path(__file__).parent / ".env", override=True)
 DATA      = Path(__file__).parent / "data"
 FILES_DIR = DATA / "files"
 
-FAQ_QUICK = [
-    "가맹점 정산주기는 어떻게 확인하나요?",
-    "가맹점 수수료율은 어떻게 확인하나요?",
-    "매핑SET의 카드사별 가맹점번호는 어떻게 확인하나요?",
-    "고객 무이자 미적용 민원 이유가 뭘까요?",
-    "카드사 업종 무이자 정책은 어떻게 확인하나요?",
-    "신용카드 매출전표 표기명을 변경할 수 있나요?",
-    "거래건 분담무이자 적용 거래건은 어디서 조회하나요?",
-    "세금계산서 공급가액 및 세액은 어디서 확인하나요?",
-    "PG정산 대금은 어디서 조회하나요?",
-    "정산예정금액과 실제 입금금액이 다른 이유는?",
-    "역환(이월)금액은 어떻게 없애나요?",
-    "내부관리자 메뉴가 안보여요",
-]
+CAT_ICON = {"계약정보": "📄", "내부셋팅": "⚙️", "결제": "💳", "정산": "💰"}
 
-def load_faq():
+def load_faq_structured():
+    p = DATA / "faq.txt"
+    if not p.exists(): return {}
+    text = p.read_text(encoding="utf-8")
+    result = {}
+    current_cat = None
+    current_q = None
+    current_a_lines = []
+    in_answer = False
+
+    def save_qa():
+        nonlocal current_q, current_a_lines, in_answer
+        if current_q and current_cat is not None:
+            result.setdefault(current_cat, []).append({
+                "q": current_q, "a": "\n".join(current_a_lines).strip()
+            })
+            current_q = None
+            current_a_lines = []
+            in_answer = False
+
+    for line in text.splitlines():
+        s = line.strip()
+        if s.startswith('[') and s.endswith(']') and '=' not in s:
+            save_qa()
+            current_cat = s[1:-1]
+        elif s.startswith('Q: '):
+            save_qa()
+            current_q = s[3:]
+            in_answer = False
+        elif s.startswith('A: '):
+            in_answer = True
+            current_a_lines = [s[3:]]
+        elif in_answer and not s.startswith('==='):
+            current_a_lines.append(line)
+    save_qa()
+    return result
+
+def load_faq_raw():
     p = DATA / "faq.txt"
     return p.read_text(encoding="utf-8") if p.exists() else ""
 
@@ -47,7 +71,7 @@ def list_files():
             if f.is_file() and not f.name.startswith(".")]
 
 def build_system_prompt(role):
-    faq = load_faq()
+    faq = load_faq_raw()
     rar = load_rar()
     files = list_files()
     file_names = "\n".join(f"- {f['name']}" for f in files) or "등록된 파일 없음"
@@ -94,12 +118,6 @@ with st.sidebar:
     icon = ROLE_ICON.get(st.session_state.get("role", ""), "")
     st.markdown(f"**{icon} {st.session_state.get('role','')}** 접속 중")
 
-    st.markdown("**💡 자주 묻는 질문**")
-    for q in FAQ_QUICK:
-        if st.button(q, key=f"faq_{q}"):
-            st.session_state.faq_trigger = q
-            st.rerun()
-
     files = list_files()
     if files:
         st.markdown("---")
@@ -113,48 +131,170 @@ with st.sidebar:
 
     st.markdown("---")
     if st.button("대화 초기화", use_container_width=True):
-        st.session_state.messages = []
+        st.session_state.chat_messages = []
         st.rerun()
     if st.button("로그아웃", use_container_width=True):
         for k in list(st.session_state.keys()):
             del st.session_state[k]
         st.rerun()
 
-# ── 챗봇 UI ────────────────────────────────────────────
+# ── Session State ────────────────────────────────────────
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = []
+if "expanded_qs" not in st.session_state:
+    st.session_state.expanded_qs = set()
+
+faq_data   = load_faq_structured()
+categories = list(faq_data.keys())
+
+if "selected_cat" not in st.session_state or st.session_state.selected_cat not in categories:
+    st.session_state.selected_cat = categories[0] if categories else None
+
+# ── 스타일 ──────────────────────────────────────────────
 st.markdown("""
 <style>
-[data-testid="stChatInput"] textarea,
-[data-testid="stChatInput"] textarea::placeholder {
-    font-family: 'Noto Sans KR', sans-serif !important;
+/* 검색창 */
+[data-testid="stTextInput"] input {
+    border-radius: 24px !important;
+    border: 1.5px solid #E2E8F0 !important;
+    padding: 10px 20px !important;
+    font-size: 14px !important;
+    background: #fff !important;
+}
+/* 카테고리 버튼 공통 */
+div[data-cat-btn] button {
+    background: transparent !important;
+    border: none !important;
+    color: #64748B !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    text-align: left !important;
+    padding: 10px 14px !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+}
+div[data-cat-btn] button:hover {
+    background: #EFF6FF !important;
+    color: #2563EB !important;
+}
+/* FAQ 질문 버튼 */
+div[data-faq-btn] button {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 10px !important;
+    padding: 14px 18px !important;
+    text-align: left !important;
     font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #1E293B !important;
+    width: 100% !important;
+    margin-bottom: 2px !important;
+    justify-content: flex-start !important;
+}
+div[data-faq-btn] button:hover {
+    border-color: #2563EB !important;
+    color: #2563EB !important;
+    background: #F8FBFF !important;
+}
+/* FAQ 답변 박스 */
+.faq-answer {
+    background: #F8FAFC;
+    border: 1px solid #DBEAFE;
+    border-radius: 0 0 10px 10px;
+    padding: 14px 20px;
+    font-size: 13px;
+    color: #334155;
+    white-space: pre-line;
+    line-height: 1.8;
+    margin-top: -4px;
+    margin-bottom: 8px;
+}
+/* 채팅 입력 */
+[data-testid="stChatInput"] textarea {
+    font-size: 13px !important;
+    border-radius: 12px !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("## 💬 챗봇")
-st.caption("FAQ · R&R · 파일 안내 | 질문을 입력하거나 왼쪽 버튼을 클릭하세요.")
+# ── 헤더 + 검색 ─────────────────────────────────────────
+st.markdown("## 💬 고객센터")
+st.caption("자주 묻는 질문을 찾아보거나, 직접 질문해보세요.")
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+search_q = st.text_input("", placeholder="🔍   무엇이든 찾아보세요", label_visibility="collapsed")
+st.markdown("<br>", unsafe_allow_html=True)
 
-for msg in st.session_state.messages:
-    avatar = "❓" if msg["role"] == "user" else "🤖"
-    with st.chat_message(msg["role"], avatar=avatar):
-        st.markdown(msg["content"])
+# ── 카테고리 + 메인 영역 ────────────────────────────────
+col_cat, col_main = st.columns([2, 8])
 
-triggered_q = st.session_state.pop("faq_trigger", None) if "faq_trigger" in st.session_state else None
-user_input  = st.chat_input("질문을 입력하세요...") or triggered_q
+with col_cat:
+    st.markdown("**질문 유형**")
+    st.markdown("<br>", unsafe_allow_html=True)
+    for cat in categories:
+        ico = CAT_ICON.get(cat, "📌")
+        is_active = st.session_state.selected_cat == cat
+        label = f"**{ico} {cat}**" if is_active else f"{ico} {cat}"
+        st.markdown('<div data-cat-btn="1">', unsafe_allow_html=True)
+        if st.button(label, key=f"cat_{cat}", use_container_width=True):
+            st.session_state.selected_cat = cat
+            st.session_state.expanded_qs = set()
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-if user_input:
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user", avatar="❓"):
-        st.markdown(user_input)
-    with st.chat_message("assistant", avatar="🤖"):
-        with st.spinner("답변 생성 중..."):
-            answer = ask_claude(
-                [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
-                st.session_state.get("role", "PG사업지원팀"),
-            )
-        st.markdown(answer)
-    st.session_state.messages.append({"role": "assistant", "content": answer})
-    st.rerun()
+with col_main:
+    # ── FAQ 질문 목록 ──────────────────────────────────
+    if search_q:
+        items = []
+        for cat, qa_list in faq_data.items():
+            for i, qa in enumerate(qa_list):
+                if search_q.lower() in qa["q"].lower() or search_q.lower() in qa["a"].lower():
+                    items.append((cat, i, qa))
+        if not items:
+            st.info("검색 결과가 없습니다.")
+    else:
+        selected = st.session_state.selected_cat
+        items = [(selected, i, qa) for i, qa in enumerate(faq_data.get(selected, []))]
+
+    for cat, i, qa in items:
+        q_key = f"faq_{cat}_{i}"
+        is_exp = q_key in st.session_state.expanded_qs
+        arrow  = "▲" if is_exp else "▼"
+
+        st.markdown('<div data-faq-btn="1">', unsafe_allow_html=True)
+        if st.button(f"Q.  {qa['q']}　{arrow}", key=q_key, use_container_width=True):
+            if is_exp:
+                st.session_state.expanded_qs.discard(q_key)
+            else:
+                st.session_state.expanded_qs.add(q_key)
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        if is_exp:
+            st.markdown(f'<div class="faq-answer">{qa["a"]}</div>', unsafe_allow_html=True)
+
+    # ── 챗봇 섹션 ──────────────────────────────────────
+    st.markdown("---")
+    st.markdown("**💬 원하는 답변을 찾지 못하셨나요? 직접 질문해보세요.**")
+
+    for msg in st.session_state.chat_messages:
+        avatar = "❓" if msg["role"] == "user" else "🤖"
+        with st.chat_message(msg["role"], avatar=avatar):
+            st.markdown(msg["content"])
+
+    user_input = st.chat_input("질문을 입력하세요...")
+
+    if user_input:
+        st.session_state.chat_messages.append({"role": "user", "content": user_input})
+        with st.chat_message("user", avatar="❓"):
+            st.markdown(user_input)
+        with st.chat_message("assistant", avatar="🤖"):
+            with st.spinner("답변 생성 중..."):
+                answer = ask_claude(
+                    [{"role": m["role"], "content": m["content"]}
+                     for m in st.session_state.chat_messages],
+                    st.session_state.get("role", "PG사업지원팀"),
+                )
+            st.markdown(answer)
+        st.session_state.chat_messages.append({"role": "assistant", "content": answer})
+        st.rerun()
