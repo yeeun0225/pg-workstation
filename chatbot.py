@@ -2,9 +2,15 @@ import streamlit as st
 import anthropic
 import os
 import json
+import requests
 from pathlib import Path
 from dotenv import load_dotenv
 from utils.auth import ROLE_ICON
+try:
+    from streamlit_lottie import st_lottie
+    _LOTTIE_OK = True
+except ImportError:
+    _LOTTIE_OK = False
 
 load_dotenv(Path(__file__).parent / ".env", override=True)
 
@@ -103,6 +109,16 @@ def ask_claude(history, role):
         messages=history,
     )
     return response.content[0].text
+
+@st.cache_data(ttl=3600)
+def load_lottie_url(url: str):
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200:
+            return r.json()
+    except Exception:
+        pass
+    return None
 
 # ── 사이드바 ───────────────────────────────────────────
 with st.sidebar:
@@ -238,7 +254,42 @@ KEYWORDS = [
 ]
 
 with tab_chat:
-    st.caption("질문을 입력하거나 키워드를 클릭하세요.")
+    # ── Greeting Hero (대화 없을 때만 표시) ────────────
+    if not st.session_state.chat_messages:
+        st.markdown("<br>", unsafe_allow_html=True)
+        _, hero_col, _ = st.columns([1, 2, 1])
+        with hero_col:
+            if _LOTTIE_OK:
+                lottie_data = load_lottie_url(
+                    "https://assets9.lottiefiles.com/packages/lf20_fcfjwiyb.json"
+                )
+                if lottie_data:
+                    st_lottie(lottie_data, height=180, loop=True, key="hero_lottie")
+                else:
+                    st.markdown(
+                        '<div style="text-align:center;font-size:72px;padding:16px 0">🤖</div>',
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.markdown(
+                    '<div style="text-align:center;font-size:72px;padding:16px 0">🤖</div>',
+                    unsafe_allow_html=True,
+                )
+            st.markdown(
+                """
+                <div style="text-align:center;padding:4px 0 28px 0">
+                    <p style="font-size:1.45rem;font-weight:700;color:#1E293B;margin:0 0 6px 0">
+                        무엇을 도와드릴까요?
+                    </p>
+                    <p style="font-size:13px;color:#94A3B8;margin:0;line-height:1.6">
+                        PG 가맹점 업무 관련 질문을 입력하거나<br>아래 키워드를 클릭해 보세요
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    else:
+        st.caption("질문을 입력하거나 키워드를 클릭하세요.")
 
     # ── 키워드 칩 ──────────────────────────────────────
     kw_cols = st.columns(len(KEYWORDS))
