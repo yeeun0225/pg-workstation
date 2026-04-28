@@ -308,7 +308,7 @@ with tab_chat:
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
 
-    user_input = st.chat_input("질문을 입력하세요...") or keyword_triggered
+    user_input = st.chat_input("🔍   궁금한 점을 검색해보세요") or keyword_triggered
 
     if user_input:
         st.session_state.chat_messages.append({"role": "user", "content": user_input})
