@@ -294,7 +294,6 @@ with tab_faq:
             if st.button(label, key=f"cat_{cat}", use_container_width=True):
                 st.session_state.selected_cat = cat
                 st.session_state.expanded_qs = set()
-                st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
     with col_main:
