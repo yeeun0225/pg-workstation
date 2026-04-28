@@ -13,15 +13,13 @@ FILES_DIR = DATA / "files"
 
 CAT_ICON = {"계약정보": "📄", "내부셋팅": "⚙️", "결제": "💳", "정산": "💰"}
 
+# ── 데이터 로드 ─────────────────────────────────────────
 def load_faq_structured():
     p = DATA / "faq.txt"
     if not p.exists(): return {}
     text = p.read_text(encoding="utf-8")
     result = {}
-    current_cat = None
-    current_q = None
-    current_a_lines = []
-    in_answer = False
+    current_cat, current_q, current_a_lines, in_answer = None, None, [], False
 
     def save_qa():
         nonlocal current_q, current_a_lines, in_answer
@@ -29,22 +27,16 @@ def load_faq_structured():
             result.setdefault(current_cat, []).append({
                 "q": current_q, "a": "\n".join(current_a_lines).strip()
             })
-            current_q = None
-            current_a_lines = []
-            in_answer = False
+            current_q = None; current_a_lines = []; in_answer = False
 
     for line in text.splitlines():
         s = line.strip()
         if s.startswith('[') and s.endswith(']') and '=' not in s:
-            save_qa()
-            current_cat = s[1:-1]
+            save_qa(); current_cat = s[1:-1]
         elif s.startswith('Q: '):
-            save_qa()
-            current_q = s[3:]
-            in_answer = False
+            save_qa(); current_q = s[3:]; in_answer = False
         elif s.startswith('A: '):
-            in_answer = True
-            current_a_lines = [s[3:]]
+            in_answer = True; current_a_lines = [s[3:]]
         elif in_answer and not s.startswith('==='):
             current_a_lines.append(line)
     save_qa()
@@ -146,38 +138,12 @@ if "expanded_qs" not in st.session_state:
 
 faq_data   = load_faq_structured()
 categories = list(faq_data.keys())
-
 if "selected_cat" not in st.session_state or st.session_state.selected_cat not in categories:
     st.session_state.selected_cat = categories[0] if categories else None
 
 # ── 스타일 ──────────────────────────────────────────────
 st.markdown("""
 <style>
-/* 검색창 */
-[data-testid="stTextInput"] input {
-    border-radius: 24px !important;
-    border: 1.5px solid #E2E8F0 !important;
-    padding: 10px 20px !important;
-    font-size: 14px !important;
-    background: #fff !important;
-}
-/* 카테고리 버튼 공통 */
-div[data-cat-btn] button {
-    background: transparent !important;
-    border: none !important;
-    color: #64748B !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
-    text-align: left !important;
-    padding: 10px 14px !important;
-    border-radius: 8px !important;
-    width: 100% !important;
-    justify-content: flex-start !important;
-}
-div[data-cat-btn] button:hover {
-    background: #EFF6FF !important;
-    color: #2563EB !important;
-}
 /* FAQ 질문 버튼 */
 div[data-faq-btn] button {
     background: #FFFFFF !important;
@@ -210,72 +176,38 @@ div[data-faq-btn] button:hover {
     margin-top: -4px;
     margin-bottom: 8px;
 }
-/* 채팅 입력 */
+/* 카테고리 버튼 */
+div[data-cat-btn] button {
+    background: transparent !important;
+    border: none !important;
+    color: #64748B !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    text-align: left !important;
+    padding: 9px 14px !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+}
+div[data-cat-btn] button:hover {
+    background: #EFF6FF !important;
+    color: #2563EB !important;
+}
 [data-testid="stChatInput"] textarea {
     font-size: 13px !important;
-    border-radius: 12px !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── 헤더 + 검색 ─────────────────────────────────────────
-st.markdown("## 💬 고객센터")
-st.caption("자주 묻는 질문을 찾아보거나, 직접 질문해보세요.")
+# ── 탭 ──────────────────────────────────────────────────
+st.markdown("## 💬 챗봇")
+tab_chat, tab_faq = st.tabs(["💬  챗봇", "❓  자주 묻는 질문"])
 
-search_q = st.text_input("", placeholder="🔍   무엇이든 찾아보세요", label_visibility="collapsed")
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ── 카테고리 + 메인 영역 ────────────────────────────────
-col_cat, col_main = st.columns([2, 8])
-
-with col_cat:
-    st.markdown("**질문 유형**")
-    st.markdown("<br>", unsafe_allow_html=True)
-    for cat in categories:
-        ico = CAT_ICON.get(cat, "📌")
-        is_active = st.session_state.selected_cat == cat
-        label = f"**{ico} {cat}**" if is_active else f"{ico} {cat}"
-        st.markdown('<div data-cat-btn="1">', unsafe_allow_html=True)
-        if st.button(label, key=f"cat_{cat}", use_container_width=True):
-            st.session_state.selected_cat = cat
-            st.session_state.expanded_qs = set()
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-with col_main:
-    # ── FAQ 질문 목록 ──────────────────────────────────
-    if search_q:
-        items = []
-        for cat, qa_list in faq_data.items():
-            for i, qa in enumerate(qa_list):
-                if search_q.lower() in qa["q"].lower() or search_q.lower() in qa["a"].lower():
-                    items.append((cat, i, qa))
-        if not items:
-            st.info("검색 결과가 없습니다.")
-    else:
-        selected = st.session_state.selected_cat
-        items = [(selected, i, qa) for i, qa in enumerate(faq_data.get(selected, []))]
-
-    for cat, i, qa in items:
-        q_key = f"faq_{cat}_{i}"
-        is_exp = q_key in st.session_state.expanded_qs
-        arrow  = "▲" if is_exp else "▼"
-
-        st.markdown('<div data-faq-btn="1">', unsafe_allow_html=True)
-        if st.button(f"Q.  {qa['q']}　{arrow}", key=q_key, use_container_width=True):
-            if is_exp:
-                st.session_state.expanded_qs.discard(q_key)
-            else:
-                st.session_state.expanded_qs.add(q_key)
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        if is_exp:
-            st.markdown(f'<div class="faq-answer">{qa["a"]}</div>', unsafe_allow_html=True)
-
-    # ── 챗봇 섹션 ──────────────────────────────────────
-    st.markdown("---")
-    st.markdown("**💬 원하는 답변을 찾지 못하셨나요? 직접 질문해보세요.**")
+# ════════════════════════════════════════════════════════
+# 탭 1 — 챗봇
+# ════════════════════════════════════════════════════════
+with tab_chat:
+    st.caption("질문을 입력하면 AI가 FAQ 기반으로 답변해드립니다.")
 
     for msg in st.session_state.chat_messages:
         avatar = "❓" if msg["role"] == "user" else "🤖"
@@ -298,3 +230,58 @@ with col_main:
             st.markdown(answer)
         st.session_state.chat_messages.append({"role": "assistant", "content": answer})
         st.rerun()
+
+# ════════════════════════════════════════════════════════
+# 탭 2 — FAQ
+# ════════════════════════════════════════════════════════
+with tab_faq:
+    st.caption("카테고리를 선택하거나 검색어를 입력하세요.")
+
+    search_q = st.text_input("", placeholder="🔍   무엇이든 찾아보세요", label_visibility="collapsed", key="faq_search")
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    col_cat, col_main = st.columns([2, 8])
+
+    with col_cat:
+        st.markdown("**카테고리**")
+        st.markdown("<br>", unsafe_allow_html=True)
+        for cat in categories:
+            ico = CAT_ICON.get(cat, "📌")
+            is_active = st.session_state.selected_cat == cat
+            label = f"**{ico} {cat}**" if is_active else f"{ico} {cat}"
+            st.markdown('<div data-cat-btn="1">', unsafe_allow_html=True)
+            if st.button(label, key=f"cat_{cat}", use_container_width=True):
+                st.session_state.selected_cat = cat
+                st.session_state.expanded_qs = set()
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    with col_main:
+        if search_q:
+            items = []
+            for cat, qa_list in faq_data.items():
+                for i, qa in enumerate(qa_list):
+                    if search_q.lower() in qa["q"].lower() or search_q.lower() in qa["a"].lower():
+                        items.append((cat, i, qa))
+            if not items:
+                st.info("검색 결과가 없습니다.")
+        else:
+            selected = st.session_state.selected_cat
+            items = [(selected, i, qa) for i, qa in enumerate(faq_data.get(selected, []))]
+
+        for cat, i, qa in items:
+            q_key = f"faq_{cat}_{i}"
+            is_exp = q_key in st.session_state.expanded_qs
+            arrow  = "▲" if is_exp else "▼"
+
+            st.markdown('<div data-faq-btn="1">', unsafe_allow_html=True)
+            if st.button(f"Q.  {qa['q']}　{arrow}", key=q_key, use_container_width=True):
+                if is_exp:
+                    st.session_state.expanded_qs.discard(q_key)
+                else:
+                    st.session_state.expanded_qs.add(q_key)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            if is_exp:
+                st.markdown(f'<div class="faq-answer">{qa["a"]}</div>', unsafe_allow_html=True)
