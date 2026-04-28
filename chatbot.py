@@ -188,10 +188,15 @@ div[data-cat-btn] button {
     border-radius: 8px !important;
     width: 100% !important;
     justify-content: flex-start !important;
+    height: 46px !important;
 }
 div[data-cat-btn] button:hover {
     background: #EFF6FF !important;
     color: #2563EB !important;
+}
+/* 카테고리 컬럼 상단 여백 제거 */
+div[data-cat-btn]:first-of-type {
+    margin-top: 0 !important;
 }
 [data-testid="stChatInput"] textarea {
     font-size: 13px !important;
@@ -243,8 +248,6 @@ with tab_faq:
     col_cat, col_main = st.columns([2, 8])
 
     with col_cat:
-        st.markdown("**카테고리**")
-        st.markdown("<br>", unsafe_allow_html=True)
         for cat in categories:
             ico = CAT_ICON.get(cat, "📌")
             is_active = st.session_state.selected_cat == cat
