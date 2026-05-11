@@ -14,8 +14,8 @@ DATA = Path(__file__).parent / "data"
 # ── 사이드바 로그아웃 ───────────────────────────────────
 with st.sidebar:
     st.markdown("---")
-    icon = ROLE_ICON.get(st.session_state.role, "")
-    st.markdown(f"**{icon} {st.session_state.role}** 접속 중")
+    icon = ROLE_ICON.get(st.session_state.get("role", ""), "")
+    st.markdown(f"**{icon} {st.session_state.get('role', '')}** 접속 중")
     if st.button("로그아웃", use_container_width=True):
         for k in list(st.session_state.keys()):
             del st.session_state[k]
