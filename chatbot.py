@@ -130,17 +130,9 @@ def load_lottie_file(path):
 def render_answer(text: str) -> str:
     """답변을 줄간격 균일한 HTML로 변환 (마크다운 렌더링 우회)"""
     import re
-    lines = text.split('\n')
-    parts = []
-    for line in lines:
-        s = line.rstrip()
-        if s == '':
-            parts.append('<div style="height:5px"></div>')
-        else:
-            esc = s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            esc = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', esc)
-            parts.append(f'<div style="margin:0;line-height:1.7;font-size:13px">{esc}</div>')
-    return '<div>' + ''.join(parts) + '</div>'
+    esc = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    esc = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', esc)
+    return f'<div style="white-space:pre-line;font-size:13px;line-height:1.7">{esc}</div>'
 
 # ── 사이드바 ───────────────────────────────────────────
 with st.sidebar:
