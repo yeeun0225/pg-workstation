@@ -130,7 +130,8 @@ def load_lottie_file(path):
 def render_answer(text: str) -> str:
     """답변을 줄간격 균일한 HTML로 변환 (마크다운 렌더링 우회)"""
     import re
-    text = re.sub(r'\n{2,}', '\n', text)   # 빈 줄 완전 제거
+    text = re.sub(r'\n\n+(\s*-)', r'\n\1', text)   # - 항목 앞 빈 줄 제거
+    text = re.sub(r'\n{3,}', '\n\n', text)           # 3줄 이상 빈 줄 → 1줄
     esc = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
     esc = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', esc)
     return f'<div style="white-space:pre-line;font-size:13px;line-height:1.8">{esc}</div>'
