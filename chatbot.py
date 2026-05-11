@@ -108,13 +108,7 @@ def ask_claude(history, role):
         system=build_system_prompt(role),
         messages=history,
     )
-    import re
-    text = response.content[0].text
-    # 마크다운 bullet(- ) → 이스케이프(\-) 처리로 • 대신 - 로 표시
-    text = re.sub(r'^(\s*)-\s', r'\1\\- ', text, flags=re.MULTILINE)
-    # 3줄 이상 연속 빈줄 → 1줄
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    return text
+    return response.content[0].text
 
 @st.cache_data(ttl=3600)
 def load_lottie_url(url: str):
@@ -132,6 +126,21 @@ def load_lottie_file(path):
             return json.load(f)
     except Exception:
         return None
+
+def render_answer(text: str) -> str:
+    """답변을 줄간격 균일한 HTML로 변환 (마크다운 렌더링 우회)"""
+    import re
+    lines = text.split('\n')
+    parts = []
+    for line in lines:
+        s = line.rstrip()
+        if s == '':
+            parts.append('<div style="height:5px"></div>')
+        else:
+            esc = s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            esc = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', esc)
+            parts.append(f'<div style="margin:0;line-height:1.7;font-size:13px">{esc}</div>')
+    return '<div>' + ''.join(parts) + '</div>'
 
 # ── 사이드바 ───────────────────────────────────────────
 with st.sidebar:
@@ -346,7 +355,10 @@ with tab_chat:
     for msg in st.session_state.chat_messages:
         avatar = "❓" if msg["role"] == "user" else "🤖"
         with st.chat_message(msg["role"], avatar=avatar):
-            st.markdown(msg["content"])
+            if msg["role"] == "assistant":
+                st.markdown(render_answer(msg["content"]), unsafe_allow_html=True)
+            else:
+                st.markdown(msg["content"])
 
     user_input = st.chat_input("🔍   궁금한 점을 검색해보세요")
 
@@ -361,7 +373,7 @@ with tab_chat:
                      for m in st.session_state.chat_messages],
                     st.session_state.get("role", "PG사업지원팀"),
                 )
-            st.markdown(answer)
+            st.markdown(render_answer(answer), unsafe_allow_html=True)
         st.session_state.chat_messages.append({"role": "assistant", "content": answer})
         st.rerun()
 
