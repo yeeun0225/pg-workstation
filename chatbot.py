@@ -108,7 +108,10 @@ def ask_claude(history, role):
         system=build_system_prompt(role),
         messages=history,
     )
-    return response.content[0].text
+    import re
+    text = response.content[0].text
+    text = re.sub(r'\n{3,}', '\n\n', text)   # 3줄 이상 연속 빈줄 → 1줄로
+    return text
 
 @st.cache_data(ttl=3600)
 def load_lottie_url(url: str):

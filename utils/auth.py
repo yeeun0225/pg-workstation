@@ -50,20 +50,23 @@ header [data-testid] span:not(:has(svg)) {
     position: absolute !important;
     clip: rect(0,0,0,0) !important;
 }
-[data-testid="stChatMessage"] p {
+[data-testid="stChatMessage"] p,
+[data-testid="stChatMessage"] div > p {
     font-size: 13px !important;
-    margin-top: 3px !important;
-    margin-bottom: 3px !important;
+    margin-top: 2px !important;
+    margin-bottom: 2px !important;
     line-height: 1.65 !important;
 }
 [data-testid="stChatMessage"] ul,
 [data-testid="stChatMessage"] ol {
-    margin-top: 4px !important;
-    margin-bottom: 4px !important;
+    margin-top: 2px !important;
+    margin-bottom: 2px !important;
     padding-left: 18px !important;
 }
-[data-testid="stChatMessage"] li {
-    margin-bottom: 2px !important;
+[data-testid="stChatMessage"] li,
+[data-testid="stChatMessage"] li > p {
+    margin-top: 1px !important;
+    margin-bottom: 1px !important;
     line-height: 1.65 !important;
 }
 [data-testid="stChatMessage"] h1 { font-size: 1.7rem !important; }
