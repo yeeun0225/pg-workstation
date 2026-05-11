@@ -127,6 +127,11 @@ def load_lottie_file(path):
     except Exception:
         return None
 
+@st.cache_data(ttl=3600)
+def load_image_cached(img_path: str) -> bytes:
+    with open(img_path, "rb") as f:
+        return f.read()
+
 def display_faq_answer(answer_text: str):
     """FAQ 답변을 텍스트+이미지 혼합으로 렌더링"""
     import re
@@ -145,7 +150,7 @@ def display_faq_answer(answer_text: str):
         else:  # 이미지 파일명
             img_path = DATA / "images" / part.strip()
             if img_path.exists():
-                st.image(str(img_path), use_container_width=True)
+                st.image(load_image_cached(str(img_path)), use_container_width=True)
 
 def render_answer(text: str) -> str:
     """답변을 줄간격 균일한 HTML로 변환"""
