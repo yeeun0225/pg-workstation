@@ -110,9 +110,8 @@ def ask_claude(history, role):
     )
     import re
     text = response.content[0].text
-    # 리스트 항목 사이 빈 줄 제거 (loose list → tight list)
-    text = re.sub(r'\n\n([ \t]*[-•*])', r'\n\1', text)
-    text = re.sub(r'\n\n([ \t]*\d+[\.\)])', r'\n\1', text)
+    # 마크다운 bullet(- ) → 이스케이프(\-) 처리로 • 대신 - 로 표시
+    text = re.sub(r'^(\s*)-\s', r'\1\\- ', text, flags=re.MULTILINE)
     # 3줄 이상 연속 빈줄 → 1줄
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text
