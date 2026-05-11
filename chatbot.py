@@ -127,6 +127,26 @@ def load_lottie_file(path):
     except Exception:
         return None
 
+def display_faq_answer(answer_text: str):
+    """FAQ 답변을 텍스트+이미지 혼합으로 렌더링"""
+    import re
+    parts = re.split(r'\[IMAGE:([^\]]+)\]', answer_text)
+    has_text = any(p.strip() for i, p in enumerate(parts) if i % 2 == 0)
+    has_image = len(parts) > 1
+
+    if not has_image:
+        st.markdown(f'<div class="faq-answer">{render_answer(answer_text)}</div>', unsafe_allow_html=True)
+        return
+
+    for j, part in enumerate(parts):
+        if j % 2 == 0:  # 텍스트
+            if part.strip():
+                st.markdown(f'<div class="faq-answer">{render_answer(part)}</div>', unsafe_allow_html=True)
+        else:  # 이미지 파일명
+            img_path = DATA / "images" / part.strip()
+            if img_path.exists():
+                st.image(str(img_path), use_container_width=True)
+
 def render_answer(text: str) -> str:
     """답변을 줄간격 균일한 HTML로 변환"""
     import re
@@ -352,7 +372,7 @@ with tab_chat:
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             if is_exp:
-                st.markdown(f'<div class="faq-answer">{render_answer(qa["a"])}</div>', unsafe_allow_html=True)
+                display_faq_answer(qa["a"])
         st.markdown("<br>", unsafe_allow_html=True)
 
     # ── 채팅 메시지 ────────────────────────────────────
@@ -431,4 +451,4 @@ with tab_faq:
             st.markdown('</div>', unsafe_allow_html=True)
 
             if is_exp:
-                st.markdown(f'<div class="faq-answer">{render_answer(qa["a"])}</div>', unsafe_allow_html=True)
+                display_faq_answer(qa["a"])
