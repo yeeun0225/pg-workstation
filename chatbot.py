@@ -128,14 +128,23 @@ def load_lottie_file(path):
         return None
 
 def render_answer(text: str) -> str:
-    """답변을 줄간격 균일한 HTML로 변환 (마크다운 렌더링 우회)"""
+    """답변을 줄간격 균일한 HTML로 변환"""
     import re
-    # 숫자 항목(1. 2. 3.) 앞 빈 줄만 유지, 나머지 빈 줄은 모두 제거
-    text = re.sub(r'\n\n+(?!\s*\d+[\.\)])', '\n', text)
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    esc = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-    esc = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', esc)
-    return f'<div style="white-space:pre-line;font-size:13px;line-height:1.8">{esc}</div>'
+    lines = text.split('\n')
+    parts = []
+    has_content = False
+    for line in lines:
+        s = line.rstrip()
+        if not s:
+            continue  # 빈 줄 전부 스킵
+        esc = s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        esc = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', esc)
+        # 숫자 항목(1. 2. 3.) 앞에만 간격 추가
+        if re.match(r'^\s*\d+[\.\)]\s', s) and has_content:
+            parts.append('<div style="height:8px"></div>')
+        parts.append(f'<div style="line-height:1.8;font-size:13px">{esc}</div>')
+        has_content = True
+    return '<div>' + ''.join(parts) + '</div>'
 
 # ── 사이드바 ───────────────────────────────────────────
 with st.sidebar:
