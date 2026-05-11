@@ -37,7 +37,7 @@ def load_faq_structured():
 
     for line in text.splitlines():
         s = line.strip()
-        if s.startswith('[') and s.endswith(']') and '=' not in s:
+        if s.startswith('[') and s.endswith(']') and '=' not in s and not s.startswith('[IMAGE:'):
             save_qa(); current_cat = s[1:-1]
         elif s.startswith('Q: '):
             save_qa(); current_q = s[3:]; in_answer = False
