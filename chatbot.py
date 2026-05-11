@@ -340,7 +340,7 @@ with tab_chat:
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             if is_exp:
-                st.markdown(f'<div class="faq-answer">{qa["a"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="faq-answer">{render_answer(qa["a"])}</div>', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
     # ── 채팅 메시지 ────────────────────────────────────
@@ -419,4 +419,4 @@ with tab_faq:
             st.markdown('</div>', unsafe_allow_html=True)
 
             if is_exp:
-                st.markdown(f'<div class="faq-answer">{qa["a"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="faq-answer">{render_answer(qa["a"])}</div>', unsafe_allow_html=True)
