@@ -120,6 +120,13 @@ def load_lottie_url(url: str):
         pass
     return None
 
+def load_lottie_file(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
 # ── 사이드바 ───────────────────────────────────────────
 with st.sidebar:
     st.markdown("---")
@@ -254,8 +261,9 @@ with tab_chat:
         _, hero_col, _ = st.columns([1, 2, 1])
         with hero_col:
             if _LOTTIE_OK:
-                lottie_data = load_lottie_url(
-                    "https://assets9.lottiefiles.com/packages/lf20_fcfjwiyb.json"
+                lottie_data = (
+                    load_lottie_file(DATA / "hero_lottie.json")
+                    or load_lottie_url("https://assets9.lottiefiles.com/packages/lf20_fcfjwiyb.json")
                 )
                 if lottie_data:
                     st_lottie(lottie_data, height=180, loop=True, key="hero_lottie")
