@@ -50,7 +50,22 @@ header [data-testid] span:not(:has(svg)) {
     position: absolute !important;
     clip: rect(0,0,0,0) !important;
 }
-[data-testid="stChatMessage"] p { font-size: 13px !important; }
+[data-testid="stChatMessage"] p {
+    font-size: 13px !important;
+    margin-top: 3px !important;
+    margin-bottom: 3px !important;
+    line-height: 1.65 !important;
+}
+[data-testid="stChatMessage"] ul,
+[data-testid="stChatMessage"] ol {
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+    padding-left: 18px !important;
+}
+[data-testid="stChatMessage"] li {
+    margin-bottom: 2px !important;
+    line-height: 1.65 !important;
+}
 [data-testid="stChatMessage"] h1 { font-size: 1.7rem !important; }
 [data-testid="stChatMessage"] h2 { font-size: 1.4rem !important; }
 [data-testid="stChatMessage"] h3 { font-size: 1.1rem !important; }
