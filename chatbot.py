@@ -110,7 +110,11 @@ def ask_claude(history, role):
     )
     import re
     text = response.content[0].text
-    text = re.sub(r'\n{3,}', '\n\n', text)   # 3줄 이상 연속 빈줄 → 1줄로
+    # 리스트 항목 사이 빈 줄 제거 (loose list → tight list)
+    text = re.sub(r'\n\n([ \t]*[-•*])', r'\n\1', text)
+    text = re.sub(r'\n\n([ \t]*\d+[\.\)])', r'\n\1', text)
+    # 3줄 이상 연속 빈줄 → 1줄
+    text = re.sub(r'\n{3,}', '\n\n', text)
     return text
 
 @st.cache_data(ttl=3600)
