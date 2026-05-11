@@ -151,6 +151,10 @@ if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = []
 if "expanded_qs" not in st.session_state:
     st.session_state.expanded_qs = set()
+if "chip_cat" not in st.session_state:
+    st.session_state.chip_cat = None
+if "chip_expanded_qs" not in st.session_state:
+    st.session_state.chip_expanded_qs = set()
 
 faq_data   = load_faq_structured()
 categories = list(faq_data.keys())
@@ -243,16 +247,6 @@ tab_chat, tab_faq = st.tabs(["💬  챗봇", "❓  자주 묻는 질문"])
 # ════════════════════════════════════════════════════════
 # 탭 1 — 챗봇
 # ════════════════════════════════════════════════════════
-KEYWORDS = [
-    ("수수료 변경", "수수료율은 어떻게 확인하나요?"),
-    ("가맹점 SET", "KCP 대표 매핑SET는 어떤게 있나요?"),
-    ("사전몰 심사현황", "가맹점 카드사 사전몰 심사 현황은 어디서 확인하나요?"),
-    ("정산계좌 변경", "가맹점 정산계좌는 어떻게 바꾸나요?"),
-    ("업종무이자 정책", "카드사 업종 무이자 정책은 어떻게 확인하나요?"),
-    ("해외카드 계약", "해외카드를 계약하고싶은 가맹점이 있어요, 어떻게 해야하나요?"),
-    ("역환금액 처리", "사이트코드에 발생된 역환(이월)금액은 어떻게 없애나요?"),
-]
-
 with tab_chat:
     # ── Greeting Hero (대화 없을 때만 표시) ────────────
     if not st.session_state.chat_messages:
@@ -282,33 +276,65 @@ with tab_chat:
                         무엇을 도와드릴까요?
                     </p>
                     <p style="font-size:13px;color:#94A3B8;margin:0;line-height:1.6">
-                        PG 가맹점 업무 관련 질문을 입력하거나<br>아래 키워드를 클릭해 보세요
+                        PG 가맹점 업무 관련 질문을 입력하거나<br>아래 카테고리를 클릭해 보세요
                     </p>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
     else:
-        st.caption("질문을 입력하거나 키워드를 클릭하세요.")
+        st.caption("질문을 입력하거나 카테고리를 클릭하세요.")
 
-    # ── 키워드 칩 ──────────────────────────────────────
-    kw_cols = st.columns(len(KEYWORDS))
-    keyword_triggered = None
-    for idx, (label, question) in enumerate(KEYWORDS):
-        with kw_cols[idx]:
-            st.markdown('<div data-keyword-btn="1">', unsafe_allow_html=True)
-            if st.button(label, key=f"kw_{idx}"):
-                keyword_triggered = question
+    # ── 카테고리 칩 ────────────────────────────────────
+    if categories:
+        cat_cols = st.columns(len(categories))
+        for idx, cat in enumerate(categories):
+            ico = CAT_ICON.get(cat, "📌")
+            is_active = st.session_state.chip_cat == cat
+            btn_label = f"**{ico} {cat}**" if is_active else f"{ico} {cat}"
+            with cat_cols[idx]:
+                st.markdown('<div data-keyword-btn="1">', unsafe_allow_html=True)
+                if st.button(btn_label, key=f"chip_{cat}", use_container_width=True):
+                    if is_active:
+                        st.session_state.chip_cat = None
+                        st.session_state.chip_expanded_qs = set()
+                    else:
+                        st.session_state.chip_cat = cat
+                        st.session_state.chip_expanded_qs = set()
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── 선택된 카테고리 FAQ 인라인 표시 ───────────────
+    if st.session_state.chip_cat and st.session_state.chip_cat in faq_data:
+        active_cat = st.session_state.chip_cat
+        st.markdown(
+            f'<div style="margin:12px 0 6px 0;font-size:13px;font-weight:600;color:#2563EB">'
+            f'{CAT_ICON.get(active_cat,"📌")} {active_cat} 자주 묻는 질문</div>',
+            unsafe_allow_html=True,
+        )
+        for i, qa in enumerate(faq_data[active_cat]):
+            q_key = f"chip_faq_{active_cat}_{i}"
+            is_exp = q_key in st.session_state.chip_expanded_qs
+            arrow  = "▲" if is_exp else "▼"
+            st.markdown('<div data-faq-btn="1">', unsafe_allow_html=True)
+            if st.button(f"Q.  {qa['q']}　{arrow}", key=q_key, use_container_width=True):
+                if is_exp:
+                    st.session_state.chip_expanded_qs.discard(q_key)
+                else:
+                    st.session_state.chip_expanded_qs.add(q_key)
+                st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
+            if is_exp:
+                st.markdown(f'<div class="faq-answer">{qa["a"]}</div>', unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
+    # ── 채팅 메시지 ────────────────────────────────────
     for msg in st.session_state.chat_messages:
         avatar = "❓" if msg["role"] == "user" else "🤖"
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
 
-    user_input = st.chat_input("🔍   궁금한 점을 검색해보세요") or keyword_triggered
+    user_input = st.chat_input("🔍   궁금한 점을 검색해보세요")
 
     if user_input:
         st.session_state.chat_messages.append({"role": "user", "content": user_input})
