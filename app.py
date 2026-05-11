@@ -30,9 +30,14 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ── 페이지 네비게이션 ───────────────────────────────────
-pg = st.navigation([
-    st.Page("home.py",    title="홈",    icon="🏠", default=True),
-    st.Page("chatbot.py", title="챗봇",  icon="💬"),
-    st.Page("issues.py",  title="이슈",  icon="📋"),
-])
+if st.session_state.role == "영업팀":
+    pg = st.navigation([
+        st.Page("chatbot.py", title="챗봇", icon="💬", default=True),
+    ])
+else:
+    pg = st.navigation([
+        st.Page("home.py",    title="홈",    icon="🏠", default=True),
+        st.Page("chatbot.py", title="챗봇",  icon="💬"),
+        st.Page("issues.py",  title="이슈",  icon="📋"),
+    ])
 pg.run()
